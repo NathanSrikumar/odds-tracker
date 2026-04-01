@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-API_KEY = "a6df683e99b86a8db984eee77f5399b7"
+API_KEY = "94ccbe0ca2a674bdf04bb15d9d78bca0"
 
 def get_odds():
     url = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
