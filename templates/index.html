@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA +EV Odds Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0f1117;
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 40px;
+            font-size: 0.95rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        select {
+            background-color: #1e2130;
+            color: #ffffff;
+            border: 1px solid #2e3250;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        button {
+            background-color: #4f6ef7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #3a57d4;
+        }
+
+        #status {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            min-height: 20px;
+        }
+
+        #results {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background-color: #1e2130;
+            border: 1px solid #2e3250;
+            border-radius: 12px;
+            padding: 20px 24px;
+        }
+
+        .card-game {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 6px;
+        }
+
+        .card-team {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .card-odds {
+            display: flex;
+            gap: 12px;
+        }
+
+        .odds-box {
+            flex: 1;
+            background-color: #0f1117;
+            border-radius: 8px;
+            padding: 10px 14px;
+            text-align: center;
+        }
+
+        .odds-box .book {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .odds-box .price {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .odds-box.highlight .price {
+            color: #4f6ef7;
+        }
+
+        .sharp-label {
+            font-size: 0.65rem;
+            color: #888;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>NBA +EV Odds Tracker</h1>
+    <p class="subtitle">Find positive expected value opportunities across sportsbooks</p>
+
+    <div class="controls">
+        <select id="sharpSelect">
+            <option value="">Select sharp book</option>
+            {% for book in books %}
+            <option value="{{ book }}">{{ book }}</option>
+            {% endfor %}
+        </select>
+        <button onclick="fetchOdds()">Find +EV Opportunities</button>
+    </div>
+
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        let refreshInterval = null;
+        
+        function loadBooks() {
+    fetch("/books")
+        .then(res => res.json())
+        .then(data => {
+            const select = document.getElementById("sharpSelect");
+            select.innerHTML = '<option value="">Select sharp book</option>';
+            data.forEach(book => {
+                const option = document.createElement("option");
+                option.value = book;
+                option.textContent = book;
+                select.appendChild(option);
+            });
+        });
+}
+
+loadBooks();
+
+
+        function fetchOdds() {
+            const sharp = document.getElementById("sharpSelect").value;
+            if (!sharp) {
+                document.getElementById("status").textContent = "Please select a sharp book.";
+                return;
+            }
+
+            document.getElementById("status").textContent = "Fetching odds...";
+
+            fetch(`/odds?sharp=${encodeURIComponent(sharp)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const results = document.getElementById("results");
+                    const status = document.getElementById("status");
+                    results.innerHTML = "";
+
+                    if (data.length === 0) {
+                        status.textContent = "No +EV opportunities found right now.";
+                        return;
+                    }
+
+                    status.textContent = `${data.length} opportunity${data.length > 1 ? "s" : ""} found — last updated ${new Date().toLocaleTimeString()}`;
+
+                    data.forEach(o => {
+                        const card = document.createElement("div");
+                        card.className = "card";
+                        card.innerHTML = `
+                            <div class="card-game">${o.game}</div>
+                            <div class="card-team">${o.team}</div>
+                            <div class="card-odds">
+                                <div class="odds-box">
+                                    <div class="book">${o.sharp}</div>
+                                    <div class="price">${o.sharp_odds > 0 ? "+" : ""}${o.sharp_odds}</div>
+                                    <div class="sharp-label">sharp</div>
+                                </div>
+                                <div class="odds-box highlight">
+                                    <div class="book">${o.book}</div>
+                                    <div class="price">${o.book_odds > 0 ? "+" : ""}${o.book_odds}</div>
+                                    <div class="sharp-label">+EV</div>
+                                </div>
+                            </div>
+                        `;
+                        results.appendChild(card);
+                    });
+
+                    if (!refreshInterval) {
+                        refreshInterval = setInterval(fetchOdds, 15000);
+                    }
+                })
+                .catch(() => {
+                    document.getElementById("status").textContent = "Error fetching odds.";
+                });
+        }
+    </script>
+</body>
+</html>
