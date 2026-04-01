@@ -2,7 +2,7 @@ import requests
 import tkinter as tk
 from tkinter import ttk
 
-API_KEY = "09895d621cabd23c44eab8a9d4c28530"
+API_KEY = "a6df683e99b86a8db984eee77f5399b7"
 
 def get_odds():
     url = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
@@ -73,6 +73,7 @@ def fetch_and_display():
             results_text.insert(tk.END, f"Team:       {o['team']}\n")
             results_text.insert(tk.END, f"{o['sharp']}:  {o['sharp_odds']}  |  {o['book']}: {o['book_odds']}\n")
             results_text.insert(tk.END, "-" * 50 + "\n")
+        root.after(15000, fetch_and_display)
 
 # build window
 root = tk.Tk()
