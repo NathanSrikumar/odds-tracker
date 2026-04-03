@@ -1,9 +1,13 @@
 from flask import Flask, jsonify, render_template, request
 import requests
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
-API_KEY = "94ccbe0ca2a674bdf04bb15d9d78bca0"
+API_KEY = os.getenv("API_KEY")
 
 def get_odds():
     url = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
